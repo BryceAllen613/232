@@ -1,0 +1,55 @@
+Script started on Wed 08 May 2019 04:56:47 PM EDT
+bda5@maroon08:~/232/proj05_cs232$ java CaesarCipherClient maroon22 9876 7
+Welcome to the Caesar Cipher!
+
+enter a number 1-25: 
+13
+echo: 13
+enter a phrase to encrypt: 
+thisisthesecond  client
+echo: guvfvfgurfrpbaqpyvrag
+enter a phrase to encrypt: 
+quit
+echo: null
+bda5@maroon08:~/232/proj05_cs232$ java CaesarCipherClient maroon22 9877
+Welcome to the Caesar Cipher!
+
+enter a number 1-25: 
+3
+echo: 3
+enter a phrase to encrypt: 
+aaaaaaa
+echo: ddddddd
+enter a phrase to encrypt: 
+foo
+echo: irr
+enter a phrase to encrypt: 
+quit
+echo: null
+bda5@maroon08:~/232/proj05_cs232$ java CaesarCipherClient maroon22 9877
+Welcome to the Caesar Cipher!
+
+enter a number 1-25: 
+240
+240 not echoed.
+enter a number 1-25: 
+-98
+-98 not echoed.
+enter a number 1-25: 
+bleh
+java.lang.NumberFormatException: For input string: "bleh"
+enter a number 1-25: 
+14
+echo: 14
+enter a phrase to encrypt: 
+lasttest
+echo: zoghhsgh
+enter a phrase to encrypt: 
+happythursday
+echo: voddmhvifgrom
+enter a phrase to encrypt: 
+quit
+echo: null
+bda5@maroon08:~/232/proj05_cs232$ exit
+
+Script done on Wed 08 May 2019 05:03:03 PM EDT

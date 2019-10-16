@@ -1,0 +1,245 @@
+Script started on Tue 12 Mar 2019 10:20:46 PM EDT
+bda5@gold23:~/232/proj02$ ls
+2019  clean.sh	clear.sh.save  clear.sh.save.1	typescript
+bda5@gold23:~/232/proj02$ cat clean.sh
+#!/bin/sh
+#clear.sh
+#A shell script for cleaning out unused/
+# unneeded files in a specified directory
+#created by Bryce Allen for cs232 project 2 at Calvin College
+#3/12/19
+
+#delete() removes all the .o, ~, ##, .exe, and core files recursively 
+#directory we want to clear will be the first and only parameter.
+delete () {
+    echo "Cleaning Directory"
+	directory=$1
+	directoryLength=$(echo -n $directory | wc -m)
+	for i in "$1"/*
+	 do
+		#test each file and if it has the right extension -> delete
+		
+		poundLength=$(echo -n $(echo -n $i | grep -e'\#') | wc -m)
+		tildaLength=$(echo -n $(echo -n $i | grep -e'\~') | wc -m)
+		if [[ -d $i ]]; then
+			delete $i
+		elif [[ ${i##*.} = "o" ]]; then
+			rm $i
+			echo ${i} deleted.
+		elif [[ $poundLength -gt 0 ]]; then
+			rm $i
+			echo ${i} deleted.
+		elif [[ $tildaLength -gt 0 ]]; then
+			rm $i
+			echo ${i} deleted.
+		elif [[ ${i##*.} = "exe" ]]; then
+			rm $i
+			echo ${i} deleted.
+		elif [[ ${i##*/} = "core" ]]; then
+			rm $i
+			echo ${i} deleted.
+		fi
+	done
+}
+
+#main section iterates through all the command line arguments
+#and will call delete when necessary
+clean='clean'
+for i in $@; do
+	if [ $i = $clean ]; then
+		delete $2
+	fi
+done
+bda5@gold23:~/232/proj02$ cd 2019
+bda5@gold23:~/232/proj02/2019$ du
+32	./partC/goodbye
+272	./partC/coreTest
+4	./partC/.secret/S2
+272	./partC/.secret/testCore
+32	./partC/.secret/S3/S3a/goodbye
+64	./partC/.secret/S3/S3a
+52	./partC/.secret/S3/S3b
+136	./partC/.secret/S3/S3c
+256	./partC/.secret/S3
+52	./partC/.secret/S1/S1b
+136	./partC/.secret/S1/S1c
+32	./partC/.secret/S1/S1a/goodbye
+64	./partC/.secret/S1/S1a
+256	./partC/.secret/S1
+792	./partC/.secret
+1128	./partC
+4	./partB/B2
+136	./partB/B1/B1c
+32	./partB/B1/B1a/goodbye
+64	./partB/B1/B1a
+52	./partB/B1/B1b
+256	./partB/B1
+52	./partB/B3/B3b
+136	./partB/B3/B3c
+32	./partB/B3/B3a/goodbye
+64	./partB/B3/B3a
+256	./partB/B3
+520	./partB
+32	./partA/goodbye
+272	./partA/coreTest
+336	./partA
+1988	.
+bda5@gold23:~/232/proj02/2019$ ducd 2019at clean.shls[Kcp -r /home/cs/232/projects/2/2019 /home/bda5/232//proj02[Ald23:~/232/proj02/2019$ cd 2019[K
+[K[Abda5@gold23:~/232/proj02/2019$ cd 2019at clean.shls[Kdubash clean.sh clean /home/bda5/232/proj02/2019/pa rtA[A5@gold23:~/232/proj02/2019$ du[K
+[K[Abda5@gold23:~/232/proj02/2019$ dulscat clean.sh[5Pd 2019    ..
+bda5@gold23:~/232/proj02$ cd ..[3Pducd 2019at clean.shls[Kcp -r /home/cs/232/projects/2/2019 /home/bda5/232/proj002[Aa5@gold23:~/232/proj02$ cd 2019[K
+[K[Abda5@gold23:~/232/proj02$ cd 2019at clean.shls[Kdubash clean.sh clean /home/bda5/232/proj02/2019/partA
+Cleaning Directory
+Cleaning Directory
+/home/bda5/232/proj02/2019/partA/coreTest/core deleted.
+Cleaning Directory
+/home/bda5/232/proj02/2019/partA/goodbye/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019/partA/goodbye/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019/partA/#hello.c# deleted.
+/home/bda5/232/proj02/2019/partA/hello.c~ deleted.
+bda5@gold23:~/232/proj02$ du
+32	./2019/partC/goodbye
+272	./2019/partC/coreTest
+4	./2019/partC/.secret/S2
+272	./2019/partC/.secret/testCore
+32	./2019/partC/.secret/S3/S3a/goodbye
+64	./2019/partC/.secret/S3/S3a
+52	./2019/partC/.secret/S3/S3b
+136	./2019/partC/.secret/S3/S3c
+256	./2019/partC/.secret/S3
+52	./2019/partC/.secret/S1/S1b
+136	./2019/partC/.secret/S1/S1c
+32	./2019/partC/.secret/S1/S1a/goodbye
+64	./2019/partC/.secret/S1/S1a
+256	./2019/partC/.secret/S1
+792	./2019/partC/.secret
+1128	./2019/partC
+4	./2019/partB/B2
+136	./2019/partB/B1/B1c
+32	./2019/partB/B1/B1a/goodbye
+64	./2019/partB/B1/B1a
+52	./2019/partB/B1/B1b
+256	./2019/partB/B1
+52	./2019/partB/B3/B3b
+136	./2019/partB/B3/B3c
+32	./2019/partB/B3/B3a/goodbye
+64	./2019/partB/B3/B3a
+256	./2019/partB/B3
+520	./2019/partB
+24	./2019/partA/goodbye
+24	./2019/partA/coreTest
+72	./2019/partA
+1724	./2019
+1744	.
+bda5@gold23:~/232/proj02$ dubash clean.sh clean /home/bda5/232/proj02/2019/partA     
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+/home/bda5/232/proj02/2019//partB/B1/B1a/goodbye/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1a/goodbye/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1a/#hello.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1a/hello.c~ deleted.
+Cleaning Directory
+/home/bda5/232/proj02/2019//partB/B1/B1b/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1b/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1b/#hay.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1b/hay.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1b/#hey.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1b/hey.c~ deleted.
+Cleaning Directory
+/home/bda5/232/proj02/2019//partB/B1/B1c/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/#hay.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/hay.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/#hay.h# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/hay.h~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/hay.o deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/#hey.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/hey.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/#hey.h# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/hey.h~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/hey.o deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/#main.c# deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/main.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B1/B1c/main.o deleted.
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+Cleaning Directory
+/home/bda5/232/proj02/2019//partB/B3/B3a/goodbye/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3a/goodbye/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3a/#hello.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3a/hello.c~ deleted.
+Cleaning Directory
+/home/bda5/232/proj02/2019//partB/B3/B3b/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3b/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3b/#hay.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3b/hay.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3b/#hey.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3b/hey.c~ deleted.
+Cleaning Directory
+/home/bda5/232/proj02/2019//partB/B3/B3c/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/#hay.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/hay.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/#hay.h# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/hay.h~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/hay.o deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/#hey.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/hey.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/#hey.h# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/hey.h~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/hey.o deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/#main.c# deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/main.c~ deleted.
+/home/bda5/232/proj02/2019//partB/B3/B3c/main.o deleted.
+Cleaning Directory
+Cleaning Directory
+/home/bda5/232/proj02/2019//partC/coreTest/core deleted.
+Cleaning Directory
+/home/bda5/232/proj02/2019//partC/goodbye/#goodbye.c# deleted.
+/home/bda5/232/proj02/2019//partC/goodbye/goodbye.c~ deleted.
+/home/bda5/232/proj02/2019//partC/#hello.c# deleted.
+/home/bda5/232/proj02/2019//partC/hello.c~ deleted.
+bda5@gold23:~/232/proj02$ du
+24	./2019/partC/goodbye
+24	./2019/partC/coreTest
+4	./2019/partC/.secret/S2
+272	./2019/partC/.secret/testCore
+32	./2019/partC/.secret/S3/S3a/goodbye
+64	./2019/partC/.secret/S3/S3a
+52	./2019/partC/.secret/S3/S3b
+136	./2019/partC/.secret/S3/S3c
+256	./2019/partC/.secret/S3
+52	./2019/partC/.secret/S1/S1b
+136	./2019/partC/.secret/S1/S1c
+32	./2019/partC/.secret/S1/S1a/goodbye
+64	./2019/partC/.secret/S1/S1a
+256	./2019/partC/.secret/S1
+792	./2019/partC/.secret
+864	./2019/partC
+4	./2019/partB/B2
+76	./2019/partB/B1/B1c
+24	./2019/partB/B1/B1a/goodbye
+48	./2019/partB/B1/B1a
+28	./2019/partB/B1/B1b
+156	./2019/partB/B1
+28	./2019/partB/B3/B3b
+76	./2019/partB/B3/B3c
+24	./2019/partB/B3/B3a/goodbye
+48	./2019/partB/B3/B3a
+156	./2019/partB/B3
+320	./2019/partB
+24	./2019/partA/goodbye
+24	./2019/partA/coreTest
+72	./2019/partA
+1260	./2019
+1280	.
+bda5@gold23:~/232/proj02$ exit
+
+Script done on Tue 12 Mar 2019 10:22:05 PM EDT

@@ -1,0 +1,701 @@
+Script started on Thu 28 Feb 2019 07:25:49 PM EST
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cd Debug
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232/Debug$ make all
+make: Nothing to be done for 'all'.
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232/Debug$ cd ..
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat callTimer.cpp
+/*
+ * callTimer.cpp
+ * runs a program that times system calls
+ *  Created on: Feb 26, 2019
+ *      Author: Bryce Allen
+ */
+
+#include <stdio.h>
+#include <pthread.h>
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include "CommandLineController.h"
+#include "TextBasedController.h"
+
+using namespace std;
+
+/* main driver function
+ * @param argc: the number of arguments form command line.
+ * @param argv: the (dynamic) array representing the list of command line arguments.
+ */
+int main( int argc, char* argv[] )
+{
+	bool commandLine = false;
+
+	//processes the command line
+	for(int i = 0; i < argc; i++)
+		if(string(argv[i]) == "-cl")
+			commandLine = true;
+
+	//if the -cl switch is present then create instance of clc class
+	//pass it argc and argv and anything else needed
+	if(commandLine)
+		CommandLineController clc(argc, argv);
+	else//create instance of other controller class (text menu)
+		TextBasedController tbc(argc, argv);
+}
+
+
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat callTimer.cpp             CommandLineController.h
+/*
+ * CommandLineController.h
+ * method signatures and instance variables for the command line view class
+ *  Created on: Feb 26, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "CommandLineView.h"
+#ifndef COMMANDLINECONTROLLER_H_
+#define COMMANDLINECONTROLLER_H_
+
+class CommandLineController {
+public:
+	CommandLineController(int argc, char* argv[]);
+	void run();
+private:
+	bool process;
+	bool thread;
+	unsigned repeat;
+};
+
+#endif /* COMMANDLINECONTROLLER_H_ */
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat CommandLineController.h cpp
+/*
+ * CommandLineController.cpp
+ *	a controller for the command line user interface
+ *  Created on: Feb 26, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "CommandLineController.h"
+
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <pthread.h>
+#include "NanoTimer.h"
+
+/* explicit constructor takes in argc and argv to identify what actions
+ * the user wants to take
+ */
+CommandLineController::CommandLineController(int argc, char* argv[]) {
+	//traverse argv to see what commands were passed
+	//parsing the command line
+	thread = false;
+	process = false;
+	repeat = 1;
+	for(int i = 1; i < argc; i++)
+	{
+		if( string(argv[i]) == "-t" || string(argv[i]) == "-thread" )
+			thread = true;
+		else if( string(argv[i]) == "-p" || string(argv[i]) == "-process" )
+			process = true;
+		else if( string(argv[i]).substr(0,2) == "-r" )
+		{
+			string command = string(argv[i]);
+			int length = command.length();
+			repeat = atoi(command.substr(2,length).c_str());
+		}
+		else if(string(argv[i]) == "-cl"){}
+		else
+		{
+			cout<< "USAGE ERROR: improper entry" << endl;
+			exit(0);
+		}
+	}
+	//at this point we should know what we want to test
+	//thread, process, and how many times we want to repeat...
+	run();
+}
+
+/* creates an instance of command line view and runs it
+ */
+void CommandLineController::run()
+{
+	//create an instance of CommandLineView and pass it thread process and repeat
+	CommandLineView clv(thread, process, repeat);
+	clv.getView();
+}
+
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat CommandLineController.cpp              View.h
+/*
+ * CommandLineView.h
+ * method signatures and instance variables for the comand line view class
+ *  Created on: Feb 26, 2019
+ *      Author: Bryce Allen
+ */
+#include "Model.h"
+#ifndef COMMANDLINEVIEW_H_
+#define COMMANDLINEVIEW_H_
+
+class CommandLineView {
+public:
+	CommandLineView(bool thread1, bool process1, int repeat1);
+	void getView();
+private:
+	bool thread;
+	bool process;
+	int repeat;
+};
+
+#endif /* COMMANDLINEVIEW_H_ */
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat CommandLineView.h cpp
+/*
+ * CommandLineView.cpp
+ * method definitions for command line view class
+ *  Created on: Feb 26, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "CommandLineView.h"
+#include <iostream>
+
+using namespace std;
+
+/* explicit constuctor for the class, takes in two bools to represent the process and thread
+ * commands from the user and assigns them to corresponding instance variables.
+ */
+CommandLineView::CommandLineView(bool thread1, bool process1, int repeat1) {
+	thread = thread1;
+	process = process1;
+	repeat = repeat1;
+}
+
+/* getView creates an instance of model and calls runThread and runProcess when necessary
+ */
+void CommandLineView::getView()
+{
+	Model md;
+	if(thread)
+	{
+		cout << "thread was called." << endl;
+		md.runThread(repeat);
+	}
+	if(process)
+	{
+		cout << "process was called." << endl;
+		md.runProcess(repeat);
+	}
+}
+
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat CommandLineView.cpp                   CommandLineView.h[KCommandLineView.h[KTextBasedController.h
+/*
+ * TextBasedController.h
+ * method signatures and instance variables for the text based controller class
+ *  Created on: Feb 28, 2019
+ *      Author: Bryce Allen
+ */
+
+#ifndef TEXTBASEDCONTROLLER_H_
+#define TEXTBASEDCONTROLLER_H_
+#include "TextBasedView.h"
+class TextBasedController {
+public:
+	TextBasedController(int argc, char* argv[]);
+	void run();
+private:
+	bool process;
+	bool thread;
+	unsigned repeat;
+};
+
+#endif /* TEXTBASEDCONTROLLER_H_ */
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat TextBasedController.h cpp
+/*
+ * TextBasedController.cpp
+ * .cpp file for the text based controller class.
+ *  Created on: Feb 28, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "TextBasedController.h"
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <pthread.h>
+#include "NanoTimer.h"
+#include "TextBasedView.h"
+
+/* explicit constructor prompts user to identify what actions
+ * the user wants to take
+ */
+TextBasedController::TextBasedController(int argc, char* argv[]) {
+	thread = false;
+	process = false;
+	repeat = 1;
+
+	string input = "";
+	while(true){
+		cout << "Welcome to CallTimer!" << endl <<
+				"[1] Measure the time of a thread" << endl <<
+				"[2] Measure the time of a process" << endl <<
+				"[3] Measure the time of a process and a thread" << endl <<
+				"[0] Quit" << endl;
+
+		cin >> input;
+
+		if( input == "1" )
+			thread = true;
+		else if( input == "2" )
+			process = true;
+		else if( input == "3" )
+		{
+			thread = true;
+			process = true;
+		}
+		else if( input == "0" )
+			exit(0);
+
+		cout << "how many times would you like to repeat?" << endl;
+		cin >> repeat;
+
+		run();
+
+		cout << endl;
+	}
+	//at this point we should know what we want to test
+	//thread, process, and how many times we want to repeat...
+
+}
+
+/* creates an instance of text based view and runs it
+ */
+void TextBasedController::run()
+{
+	//create an instance of CommandLineView and pass it thread process and repeat
+	TextBasedView tbv(thread, process, repeat);
+	tbv.getView();
+}
+
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat TextBasedController.cpp              View.h
+/*
+ * TextBasedView.h
+ * method signatures and instance variables for the text based view class
+ *  Created on: Feb 28, 2019
+ *      Author: Bryce Allen
+ */
+
+#ifndef TEXTBASEDVIEW_H_
+#define TEXTBASEDVIEW_H_
+
+class TextBasedView {
+public:
+	TextBasedView(bool thread1, bool process1, int repeat1);
+	void getView();
+private:
+	bool thread;
+	bool process;
+	int repeat;
+};
+
+#endif /* TEXTBASEDVIEW_H_ */
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat TextBasedView.h cpp
+/*
+ * TextBasedView.cpp
+ * Method definitions for the text based view class
+ *  Created on: Feb 28, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "TextBasedView.h"
+#include "Model.h"
+#include "iostream"
+
+using namespace std;
+
+/* explicit constuctor for the class, takes in two bools to represent the process and thread
+ * commands from the user and assigns them to corresponding instance variables.
+ */
+TextBasedView::TextBasedView(bool thread1, bool process1, int repeat1) {
+	thread = thread1;
+	process = process1;
+	repeat = repeat1;
+}
+
+/* getView creates an instance of model and calls runThread and runProcess when necessary
+ */
+void TextBasedView::getView()
+{
+	Model md;
+	if(thread)
+	{
+		cout << "thread was called." << endl;
+		md.runThread(repeat);
+	}
+	if(process)
+	{
+		cout << "process was called." << endl;
+		md.runProcess(repeat);
+	}
+}
+
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat TextBasedView.cpp                 Model.h
+/*
+ * Model.h
+ * a class dedicated to timing system calls (threads and processes) and printing their
+ * times and averages to the console.
+ *  Created on: Feb 26, 2019
+ *      Author: Bryce Allen
+ */
+
+#ifndef MODEL_H_
+#define MODEL_H_
+
+class Model {
+public:
+	Model();
+	double average(double sum, unsigned numData);
+	void runThread(int repeat);
+	void runProcess(int repeat);
+};
+
+#endif /* MODEL_H_ */
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat Model.h cpp
+/*
+ * Model.cpp
+ * a class dedicated to timing system calls (threads and processes) and printing their
+ * times and averages to the console.
+ *  Created on: Feb 26, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "Model.h"
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <pthread.h>
+#include "NanoTimer.h"
+using namespace std;
+
+/* constructor for the model class
+ * (only default constructor because no instance variables are needed for this class)
+ */
+Model::Model() {}
+
+/**
+ * computes the average of a sum of numbers
+ * @param sum: a sum of numbers calculated elsewhere
+ * @param numData: the number of data points added in sum
+ * @return sum/numData
+ */
+double Model::average(double sum, unsigned numData)
+{ return sum / numData; }
+
+/* function for identifying which thread is executing the function.
+ * @param arg: the id of the thread executing this function.
+ */
+void *printHello(void *arg)
+{ cout << "hello from child thread (tid: " << (long)arg << ")" << endl; }
+
+/* runThread() creates, runs, and times thread system calls
+ * @param: repeat, the number of times you want to repeat this system call.
+ */
+void Model::runProcess(int repeat)
+{
+	 NanoTimer nt;
+	 double sum = 0.0;
+	 for( int i = 0; i < repeat; i++)
+	 {
+		 nt.start();
+		 //make two processes that run same program after this line...
+		 pid_t pid = fork();
+		 nt.stop();
+		 sum += nt.asDouble();
+
+		 if( pid == 0 ) //if child...
+		 {
+			 cout << "hello from child process (pid: "
+					 << getpid()
+					 << ")"
+					 //<< nt.asDouble()
+					 << endl;
+		 	 kill(getpid(), SIGTERM);
+		 }
+		 else //if parent...
+		 {
+			 //cout << "hello from parent (pid: " << getpid() << ")" << nt.asDouble() << endl;
+			 wait();
+		 }
+		 nt.reset();
+	 }
+	 cout << "Average process creation time: "
+	 				 << average(sum, repeat)
+	 				 << endl;
+}
+
+/* runProcess() creates, runs, and times process system calls
+ * @param: repeat, the number of times you want to repeat this system call.
+ */
+void Model::runThread(int repeat)
+{
+	NanoTimer nt;
+	double sum = 0.0;
+	sum = 0.0;
+	nt.reset();
+	pthread_t threads[repeat];
+
+	for( int i = 0; i < repeat; i++)
+	{
+		nt.start();
+		//start a thread
+		pthread_create(&threads[i], NULL, printHello, (void*)i);
+		nt.stop();
+		pthread_join(threads[i], NULL);
+		sum += nt.asDouble();
+
+		nt.reset();
+	}
+	cout << "Average thread creation time: "
+		 			<< average(sum, repeat)
+		 			<< endl;
+}
+
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat Model.cpp         NanotT   oTimer.h
+
+/* NanoTimer.h provides a simple nano-scale timer.
+ *
+ * Begun by: John Kloosterman, for CS 232 at Calvin College.
+ * Enhanced by: Prof. Adams.
+ *
+ * To use this class, compile/link with the '-lrt' switch.
+ *
+ * In Eclipse: Project > Properties > GCC C++ Linker > Libraries > Libraries > +, add 'rt'
+ */
+
+#ifndef NANO_TIMER_H_
+#define NANO_TIMER_H_
+
+#include <ctime>        // timespec, clock_gettime(), etc.
+#include <iostream>     // C++ I/O
+#include <iomanip>      // setprecision()
+#include <sstream>      // stringstream for in-memory formatting
+using namespace std;
+
+class NanoTimer {
+public:
+	NanoTimer()                  { myTotalTime = 0.0; }
+	void start();
+	void stop();
+	void reset()                 { myTotalTime = 0.0; }
+    string asString() const;
+	double getTotalTime() const  { return myTotalTime; }
+	double asDouble() const;
+
+private:
+	struct timespec myStart;
+	struct timespec myEnd;
+	double myTotalTime;
+};
+
+
+/* start the timer.
+ * Postcondition: myStart contains the current time.
+ */
+inline
+void NanoTimer::start() {
+	clock_gettime(CLOCK_MONOTONIC, &myStart);
+}
+
+/* stop the timer.
+ * Postcondition: myStop contains the current time.
+ */
+inline
+void NanoTimer::stop() {
+	clock_gettime(CLOCK_MONOTONIC, &myEnd);
+	myTotalTime += this->asDouble();
+}
+
+const long NSEC_PER_SEC = 1000000000;
+
+/* Utility function to compute time differences
+ *  (used by asString(), asDouble(), etc.
+ * Receive: end, begin, two timespec values.
+ * Return: end - begin
+ * Based on: http://www.gnu.org/s/libc/manual/html_node/Elapsed-Time.html
+ */
+inline
+timespec operator-(const timespec& end, const timespec& begin)
+{
+	timespec result = begin;
+	/* Perform the carry for the later subtraction. */
+	if (end.tv_nsec < begin.tv_nsec) {
+		int nsec = (begin.tv_nsec - end.tv_nsec) / NSEC_PER_SEC + 1;
+		result.tv_nsec -= NSEC_PER_SEC * nsec;
+		result.tv_sec += nsec;
+	}
+	if (end.tv_nsec - begin.tv_nsec > NSEC_PER_SEC) {
+		int nsec = (end.tv_nsec - begin.tv_nsec) / NSEC_PER_SEC;
+		result.tv_nsec += NSEC_PER_SEC * nsec;
+		result.tv_sec -= nsec;
+	}
+
+	/* Compute the time remaining to wait.
+            tv_usec is certainly positive. */
+	result.tv_sec = end.tv_sec - result.tv_sec;
+	result.tv_nsec = end.tv_nsec - result.tv_nsec;
+
+	return result;
+}
+
+/* String representation.
+ * Return: the processor time (user + system)
+ *    used in the interval between calls to start() and stop(),
+ *    with nanosecond granularity, as a string.
+ */
+inline
+string NanoTimer::asString() const {
+    struct timespec diff = myEnd - myStart;
+    stringstream sstr;
+    sstr << diff.tv_sec
+         << ( (diff.tv_sec == 1) ? " sec, " : " secs, " )
+         << diff.tv_nsec
+         << " nsecs";
+    return sstr.str();
+}
+
+/* Double representation.
+ * Return: the processor time (user + system)
+ *    used in the interval between calls to start() and stop(),
+ *    with nanosecond granularity, as a double.
+ */
+inline
+double NanoTimer::asDouble() const {
+   struct timespec diff = myEnd - myStart;
+   return double(diff.tv_sec) + double(diff.tv_nsec) / double(NSEC_PER_SEC);
+}
+
+
+/* ostream output
+ * Receive: out, an ostream; aTimer, a NanoTimer.
+ * Postcondition: aTimer's double representation
+ *      has been inserted into out.
+ * Return: out (for chaining).
+ */
+inline
+ostream& operator<<(ostream& out, const NanoTimer& aTimer) {
+   out << fixed << showpoint << setprecision(9)
+	   << aTimer.getTotalTime();
+   return out;
+}
+
+/* Utility function to display a timespec structure's values
+ *  (for debugging purposes)
+ */
+inline
+ostream& operator<<(ostream& out, const struct timespec& ts) {
+   out << ts.tv_sec
+       << ( (ts.tv_sec == 1) ? " sec, " : " secs, " )
+       << ts.tv_nsec
+       << " nsecs";
+   return out;
+}
+
+#endif /* NANO_TIMER_H_ */
+
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ cat NanoTimer.h[Kcat NanoTimer.h[2PModel.cpp[2PhTextBasedView.cpp[2PhController.cpp[2Ph[2PCommandLineView.cpp[2PhController.cpp[2Ph[10PcallTimer.cppd ..[Kat callTimer.cppCommandLineController.hcpp[8PView.hcppTextBasedController.hcpp[8PView.hcpp[10PModel.hcpp[2PhTextBasedView.cpp[2PhController.cpp[2Ph[2PCommandLineView.cpp[2PhController.cpp[2Ph[10PcallTimer.cppd ..[Kmake allcd Debug[2Pscript./Debug/proj01.5_cs232
+Welcome to CallTimer!
+[1] Measure the time of a thread
+[2] Measure the time of a process
+[3] Measure the time of a process and a thread
+[0] Quit
+1
+how many times would you like to repeat?
+3
+thread was called.
+hello from child thread (tid: 0)
+hello from child thread (tid: 1)
+hello from child thread (tid: 2)
+Average thread creation time: 6.6611e-05
+
+Welcome to CallTimer!
+[1] Measure the time of a thread
+[2] Measure the time of a process
+[3] Measure the time of a process and a thread
+[0] Quit
+2
+how many times would you like to repeat?
+3
+thread was called.
+hello from child thread (tid: 0)
+hello from child thread (tid: 1)
+hello from child thread (tid: 2)
+Average thread creation time: 3.2729e-05
+process was called.
+hello from child process (pid: 29521)
+Average process creation time: 0.000131188
+
+Welcome to CallTimer!
+[1] Measure the time of a thread
+[2] Measure the time of a process
+[3] Measure the time of a process and a thread
+[0] Quit
+hello from child process (pid: 29523)
+hello from child process (pid: 29522)
+3
+how many times would you like to repeat?
+5
+thread was called.
+hello from child thread (tid: 0)
+hello from child thread (tid: 1)
+hello from child thread (tid: 2)
+hello from child thread (tid: 3)
+hello from child thread (tid: 4)
+Average thread creation time: 3.86254e-05
+process was called.
+hello from child process (pid: 29529)
+hello from child process (pid: 29530)
+hello from child process (pid: 29531)
+Average process creation time: 0.000182566
+
+Welcome to CallTimer!
+hello from child process (pid: 29532)
+[1] Measure the time of a thread
+[2] Measure the time of a process
+[3] Measure the time of a process and a thread
+[0] Quit
+hello from child process (pid: 29533)
+0
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -t -r 3
+thread was called.
+hello from child thread (tid: 0)
+hello from child thread (tid: 1)
+hello from child thread (tid: 2)
+Average thread creation time: 5.39193e-05
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -t -r33[Abda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -t - -r3 [K[Abda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -p -r33[Ada5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -p
+
+process was called.
+hello from child process (pid: 29542)
+Average process creation time: 0.000134988
+hello from child process (pid: 29543)
+hello from child process (pid: 29544)
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -p -r33 [Abda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -p -r [K[Abda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -p -[K
+[K[Abda5@gold05:~/eclipse-workspace/proj01.5_cs232$ ./Debug/proj01.5_cs232 -cl -p -   -t  -r3
+thread was called.
+hello from child thread (tid: 0)
+hello from child thread (tid: 1)
+hello from child thread (tid: 2)
+Average thread creation time: 4.72023e-05
+process was called.
+hello from child process (pid: 29561)
+Average process creation time: 0.000140927
+hello from child process (pid: 29562)
+hello from child process (pid: 29563)
+bda5@gold05:~/eclipse-workspace/proj01.5_cs232$ exit
+
+Script done on Thu 28 Feb 2019 07:29:09 PM EST

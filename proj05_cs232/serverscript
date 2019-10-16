@@ -1,0 +1,150 @@
+Script started on Wed 08 May 2019 04:48:02 PM EDT
+bda5@maroon22:~/232/proj05_cs232$ cat CaesarCipherServer.java
+/**
+* application for a server for a caesar cipher
+* Bryce Allen
+* project 5 cs 232 Calvin College, may 2019
+*/
+import java.util.Scanner;
+import java.net.*;
+import java.io.*;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.text.DateFormat;
+
+/* class that spawns a new thread every time there is a connection
+*/
+public class CaesarCipherServer
+{
+    /* Constructor to create the server object
+    * @param int, represents the port number to be used
+    */
+    public CaesarCipherServer(int number)
+    { execute(number); }
+
+    /* creates a new ServerThread and runs its run() method.
+    * @param int, representing the port.
+    */
+    public void execute(int num)
+    {
+        try{
+            ServerSocket currSocket = new ServerSocket(num);
+            while(true)
+            {
+                CaesarCipherServerThread thread = new CaesarCipherServerThread(currSocket.accept());//.start();
+                thread.start();
+            }
+        }catch(Exception e){ System.out.println(e); }
+    }
+    
+    /* main method that generates a new CaesarCipherServer object with args[0]
+    * representing the port number (from command line).
+    */
+    public static void main(String[] args)
+    {
+        CaesarCipherServer curr = new CaesarCipherServer(Integer.parseInt(args[0]));
+    }
+}
+
+/* class that represents a new CaesarCipherServer thread
+*/
+class CaesarCipherServerThread extends Thread
+{
+    Socket clientSocket;
+    String ipAddress;
+    int rotateValue;
+    /* Constructor made for the class, initializes all the above instance variables and prints
+    * connection message.
+    * @param Socket, a socket that represents the port to be used.
+    */
+    public CaesarCipherServerThread(Socket sock)
+    {
+        this.clientSocket = sock;
+        ipAddress = this.clientSocket.getRemoteSocketAddress().toString();
+        DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+        Date date = new Date();
+        System.out.println("Connected to " + ipAddress + " on " + df.format(date));
+    }
+    /* creates new in and out streams for communicating with the client
+    *recieves a number for the cipher and then echos it back to client
+    * then echos back all encrypted phrases using an infinite loop.
+    */
+    public void run()
+    {
+        try{
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            
+            rotateValue = Integer.parseInt(in.readLine());
+            out.println(rotateValue);
+
+            String str = in.readLine();
+            while(true)
+            {
+                if(str.equals("quit"))
+                    break;
+                else
+                {
+                    out.println(cipher(str));
+                    str = in.readLine();
+                }
+            }
+            System.out.println("Closing connection to " + ipAddress);
+            out.close();
+            in.close();
+            clientSocket.close();
+        }catch(Exception e)
+        {
+            System.out.println(e);
+        }
+    }
+
+    /* encrypts the input phrase
+    * @param string, the string to be ciphered.
+    * @return string, the ciphered string.
+    */
+    private String cipher(String s)
+    {
+        char[] alphabet = "abcdefghijklmnopqrstuvwxyz".toCharArray();
+        char[] input = s.toCharArray();
+        
+        int pos = 0;
+        String finalString = "";
+        for( int i = 0; i < input.length; i++ )
+        {
+            if((input[i] >= 'a' && input[i] <= 'z') || (input[i] >= 'A' && input[i] <= 'Z'))
+            {
+                for( int j = 0; j < alphabet.length; j++ )
+                {
+                    if( alphabet[j] == input[i] )
+                    {
+                        pos = j;
+                        break;
+                    }
+                }
+                finalString += alphabet[(rotateValue+pos)%26];
+            }
+            else{ finalString += input[i]; }
+        }
+        return finalString;
+    }
+}
+bda5@maroon22:~/232/proj05_cs232$ javac CaesarCipherServer.java
+bda5@maroon22:~/232/proj05_cs232$ java CaesarCipherServb er 9877
+Connected to /153.106.116.231:43900 on 05/08/2019 16:50:53
+Closing connection to /153.106.116.231:43900
+Connected to /153.106.116.231:43902 on 05/08/2019 16:53:11
+Closing connection to /153.106.116.231:43902
+Connected to /153.106.116.231:43904 on 05/08/2019 16:53:48
+Connected to /153.106.116.218:52664 on 05/08/2019 16:57:24
+Closing connection to /153.106.116.218:52664
+Connected to /153.106.116.218:52666 on 05/08/2019 17:01:40
+Closing connection to /153.106.116.218:52666
+Connected to /153.106.116.218:52668 on 05/08/2019 17:02:02
+Closing connection to /153.106.116.218:52668
+Closing connection to /153.106.116.231:43904
+^Cbda5@maroon22:~/232/proj05_cs232$ ls
+CaesarCipherClient.class  CaesarCipherClient.java  CaesarCipherServer.class  CaesarCipherServer.java  CaesarCipherServerThread.class  clientscript  clientscript2  serverscript
+bda5@maroon22:~/232/proj05_cs232$ exit
+
+Script done on Wed 08 May 2019 05:05:04 PM EDT

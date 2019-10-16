@@ -1,0 +1,33 @@
+#!/bin/sh
+#directory we want to clear will be the first argument passed in to the CL.
+
+delete () {
+        echo "Cleaning Directory"
+	cd $1
+	echo $pwd
+	#files=ls
+	for i in "$1"/*
+	 do
+		#test each file and if it has the right extension -> delete
+		#echo $i
+		len=${#i}
+		if [[ $i == *"e.o" ]]; then
+			rm $i
+			echo ${i} deleted.
+		elif [[ ${i:0:1} == "#" ]]; then
+			#if [[ ${i:len-1:len} == "#" ]]; then
+			rm $i
+			echo ${i} deleted.
+			#fi
+		fi
+	done
+}
+
+clean='clean'
+
+
+for i in $@; do
+	if [ $i = $clean ]; then
+		delete $2
+	fi
+done

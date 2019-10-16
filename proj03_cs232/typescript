@@ -1,0 +1,497 @@
+Script started on Thu 11 Apr 2019 05:39:01 PM EDT
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ ls
+BSShell.cpp  BSShell.h	CommandLine.cpp  CommandLine.h	core  Debug  Path.cpp  Path.h  Project3.2.cpp  Prompt.cpp  Prompt.h  typescript
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cd Debug
+bda5@gold25:~/eclipse-workspace/proj03_cs232/Debug$ make all
+make: Warning: File '../Path.h' has modification time 14194 s in the future
+Building file: ../BSShell.cpp
+Invoking: GCC C++ Compiler
+g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"BSShell.d" -MT"BSShell.o" -o "BSShell.o" "../BSShell.cpp"
+In file included from [01m[K../BSShell.h:19:0[m[K,
+                 from [01m[K../BSShell.cpp:10[m[K:
+[01m[K../CommandLine.h:31:19:[m[K [01;35m[Kwarning: [m[Knon-static data member initializers only available with -std=c++11 or -std=gnu++11
+  bool ampersand = false;
+[01;32m[K                   ^[m[K
+Finished building: ../BSShell.cpp
+ 
+Building file: ../Path.cpp
+Invoking: GCC C++ Compiler
+g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"Path.d" -MT"Path.o" -o "Path.o" "../Path.cpp"
+Finished building: ../Path.cpp
+ 
+Building file: ../Project3.2.cpp
+Invoking: GCC C++ Compiler
+g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"Project3.2.d" -MT"Project3.2.o" -o "Project3.2.o" "../Project3.2.cpp"
+In file included from [01m[K../BSShell.h:19:0[m[K,
+                 from [01m[K../Project3.2.cpp:12[m[K:
+[01m[K../CommandLine.h:31:19:[m[K [01;35m[Kwarning: [m[Knon-static data member initializers only available with -std=c++11 or -std=gnu++11
+  bool ampersand = false;
+[01;32m[K                   ^[m[K
+Finished building: ../Project3.2.cpp
+ 
+Building file: ../Prompt.cpp
+Invoking: GCC C++ Compiler
+g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"Prompt.d" -MT"Prompt.o" -o "Prompt.o" "../Prompt.cpp"
+Finished building: ../Prompt.cpp
+ 
+Building target: proj03_cs232
+Invoking: GCC C++ Linker
+g++  -o "proj03_cs232"  ./BSShell.o ./CommandLine.o ./Path.o ./Project3.2.o ./Prompt.o   
+Finished building target: proj03_cs232
+ 
+make: warning:  Clock skew detected.  Your build may be incomplete.
+bda5@gold25:~/eclipse-workspace/proj03_cs232/Debug$ cd ..
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat pro   Project3.2.cpp
+//============================================================================
+// Name        : 2.cpp
+// Author      : Sean Jacobsma
+// Version     :
+// Copyright   : Your copyright notice
+// Description : constructs a BSShell and runs it.
+//============================================================================
+
+#include <iostream>
+#include "Path.h"
+#include "Prompt.h"
+#include "BSShell.h"
+using namespace std;
+
+/*
+ * runs the BSShell
+ * @return -1 implicitly
+ */
+int main() {
+	BSShell myShell;
+	myShell.run();
+}
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat BSShell.h
+/*
+ * BSShell.cpp
+ * Runs the command shell (class definition)
+ * cs232
+ * Adams
+ * Created on: Mar 29, 2019
+ * Author: Bryce Allen and Sean Jacobsma
+ */
+
+#ifndef BSSHELL_H_
+#define BSSHELL_H_
+
+#include <string>
+#include <cstring>
+#include <iostream>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include "CommandLine.h"
+#include "Path.h"
+#include "Prompt.h"
+using namespace std;
+
+class BSShell {
+public:
+	BSShell();
+	void run();
+protected:
+	Prompt myPrompt;
+	Path myPath;
+	char* myCommand;
+	pid_t pid;
+};
+
+#endif /* BSSHELL_H_ */
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat BSShell.h cpp
+/*
+ * BSShell.cpp
+ * Runs the command shell (method definitions)
+ * cs232
+ * Adams
+ * Created on: Mar 29, 2019
+ * Author: Bryce Allen and Sean Jacobsma
+ */
+
+#include "BSShell.h"
+
+
+BSShell::BSShell()
+{}
+
+/**
+ * Executes the command shell using an infinite loop
+ */
+void BSShell::run()
+{
+	while(true)
+	{
+		myPrompt = Prompt();
+		cout << myPrompt.get() + "$ " << flush;
+		CommandLine cl(cin);
+		myCommand = cl.getCommand();
+		string command = myCommand;
+
+		if (command == "exit")
+		{
+			kill(pid, SIGKILL);
+			exit(0);
+		}
+		else
+		{
+			if( command == "cd" )
+			{
+				char buf[1000];
+				char * gdir = getcwd(buf, sizeof(buf));
+				char * dir = strcat(gdir, "/");
+				char * to = strcat(dir, cl.getArgVector(1));
+				chdir(to);
+			}
+			else
+			{
+				pid = fork();
+				if( pid == 0 )
+				{
+					const string w = myPath.getDirectory(myPath.find(command)).c_str();
+					char* s = (char*) ((w + '/' + command).c_str());
+					execve((const char*) s,(char* const*) cl.getArgVector(), NULL);
+					kill(pid, SIGKILL);
+				}
+				else if(cl.noAmpersand())
+				{
+					waitpid(pid, NULL, 0);
+				}
+			}
+		}
+	}
+}
+
+
+
+
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat BSShell.cpp           CommandLine.h
+/*
+ * CommandLine.h
+ * Reads information from the console and parses the command line (class definition)
+ * cs232
+ * Adams
+ *  Created on: Mar 29, 2019
+ *      Author: bda5
+ */
+
+#ifndef COMMANDLINE_H_
+#define COMMANDLINE_H_
+#include <iostream>
+#include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <cstring>
+
+using namespace std;
+
+class CommandLine {
+public:
+	CommandLine(istream& in);
+	char* getCommand() const;
+	int getArgCount() const;
+	char** getArgVector() const;
+	char* getArgVector(int i) const;
+	bool noAmpersand() const;
+
+private:
+	bool ampersand = false;
+	int argc;
+	char** argv;
+};
+
+#endif /* COMMANDLINE_H_ */
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat CommandLine.h cpp
+/*
+ * CommandLine.h
+ * Reads information from the console and parses the command line (method definitions)
+ * cs232
+ * Adams
+ *  Created on: Mar 29, 2019
+ *      Author: bda5
+ */
+
+#include "CommandLine.h"
+#include <vector>
+#include <sstream>
+#include <iterator>
+#include <cstring>
+
+/* constructor for CommandLine
+ * @param in: the istream we would read the command line from
+ */
+CommandLine::CommandLine(istream& in)
+{
+	argc = 0;
+	string input = "";
+	getline(in, input);
+	stringstream ss(input);
+
+	string s;
+
+	vector<string> vec;
+	while(ss >> s)
+	{
+		vec.push_back(s);
+		argc++;
+	}
+
+	argv = (char**)calloc(argc, sizeof(const char));
+
+	for( int i = 0; i < argc; i++ )
+	{
+		//argv[i] = vec[i].c_str();
+		//cout << argv[i] << flush;
+		char* temp = (char*)calloc(sizeof(vec[i])+1,sizeof(char));
+		temp[sizeof(vec[i])] = '\0';
+		temp = (char*) vec[i].c_str();
+		for(int j = 0; j < sizeof(vec[i]); j++)
+		{
+			temp[j] = vec[i][j];
+		}
+		argv[i] = temp;
+		//cout << argv[i] << flush;
+	}
+
+	if(argc != 0){
+		if(argv[argc-1][0] == '&'){
+			ampersand = true;
+			argc--;
+		}
+	}
+
+
+}
+
+/* simply returns the first element in argv, which is the command to be performed
+ * @return The command that need to be performed as a char*.
+ */
+char* CommandLine::getCommand() const
+{ return argv[0]; }
+
+/* returns number of arguments in this command line.
+ * @return argc, which is the counter for the number of command line arguments.
+ */
+int CommandLine::getArgCount() const
+{ return argc; }
+
+/* returns all the 'words' from the command line.
+ * @return argv: which contains all the command line arguments.
+ */
+char** CommandLine::getArgVector() const
+{ return argv; }
+
+/* returns an element at a specified index in argv.
+ * @param i: the index for the element we want to access.
+ * @return: argv[i]
+ */
+char* CommandLine::getArgVector(int i) const
+{ return argv[i]; }
+
+/* returns true if there is no ampersand in the command line
+ * false otherwise.
+ */
+bool CommandLine::noAmpersand() const
+{
+//	string s = "";
+//	for( int i = 0; i < argc; i++ ){
+//		s = argv[i];
+//		if( s.find('&') != string::npos )
+//			return false;
+//	}
+//	return true;
+	return !ampersand;
+}
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat CommandLine.cpp               Path.h
+/*
+ * Path.h
+ *
+ *  Created on: Mar 29, 2019
+ *      Author: Sean Jacobsma
+ *   Professor: Adams
+ * 		 class: CS 232
+ */
+
+#ifndef PATH_H_
+#define PATH_H_
+
+#include <string>
+#include <sstream>
+#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <dirent.h>
+using namespace std;
+
+class Path {
+public:
+	Path();
+	int find(const string& program);
+	string getDirectory(int i);
+
+protected:
+	vector <string> myPath;
+
+};
+
+
+
+#endif /* PATH_H_ */
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat Path.h cpp
+/*
+ * Path.cpp
+ *
+ *  Created on: Mar 29, 2019
+ *      Author: Sean Jacobsma
+ *   Professor: Adams
+ * 		 class: CS 232
+ */
+
+#include "Path.h"
+
+using namespace std;
+
+/* This is the consructor for the path class
+ * path has a protected variable myPath
+ * this is a sring vector which stores everything in the "PATH" environment
+ */
+Path::Path(){
+	stringstream Path(getenv("PATH"));
+	string chunk;
+	while(! Path.eof()){
+		getline(Path, chunk, ':');
+		myPath.push_back(chunk);
+	}
+}
+
+/* the find function searches the path
+ * for a program decalared as an argument
+ */
+int Path::find(const string& program){
+	DIR *dir;
+	struct dirent *entry;
+	for (int i=0; i < (int)myPath.size(); i++){
+		dir = opendir(myPath[i].c_str());
+		while((entry = readdir(dir)) != NULL ){
+			if ((string)entry->d_name == program){
+				return i;
+			}
+		}
+		closedir(dir);
+	}
+	return -1;
+}
+
+/* the get directory function returns the directory
+ * in the myPath vector that matches the input i
+ */
+string Path::getDirectory(int i){
+	return myPath[i];
+}
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat Path.cpp       rim  ompt.h
+/*
+ * Prompt.h
+ *
+ *  Created on: Mar 29, 2019
+ *      Author: Sean Jacobsma
+ *   Professor: Adams
+ * 		 class: CS 232
+ */
+
+#ifndef PROMPT_H_
+#define PROMPT_H_
+
+#include <string>
+#include <unistd.h>
+using namespace std;
+
+class Prompt {
+public:
+
+	Prompt();
+	string get() const;
+protected:
+	string path;
+};
+
+
+#endif /* PROMPT_H_ */
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ cat Prompt.cpp
+/*
+ * Prompt.cpp
+ *
+ *  Created on: Mar 29, 2019
+ *      Author: Sean Jacobsma
+ *   Professor: Adams
+ * 		 class: CS 232
+ */
+
+#include "Prompt.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <linux/limits.h>
+using namespace std;
+
+
+/* the Prompt gets the current working directory path
+ * it stores this in the protected string "path"
+ */
+Prompt::Prompt() {
+	char buffer[PATH_MAX];
+	if(getcwd(buffer, PATH_MAX) != NULL){
+		path = (string)buffer;
+	}
+}
+
+/* this function returns the path of
+ * the current working directory
+ */
+string Prompt::get() const {
+	return path;
+}
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ ./Debug/proj03_cs232
+/home/bda5/eclipse-workspace/proj03_cs232$ cd ..
+/home/bda5/eclipse-workspace$ ls
+proj01.5_cs232	proj01_cs232  proj03_cs232
+/home/bda5/eclipse-workspace$ cd ..
+/home/bda5$ ls
+112  214  Desktop    Downloads	Pictures  Templates  eclipse-workspace	  hs_err_pid3868.log  junkdir			   packages-microsoft-prod.deb.1
+212  232  Documents  Music	Public	  Videos     hs_err_pid31102.log  hs_err_pid7947.log  packages-microsoft-prod.deb  packages-microsoft-prod.deb.2
+/home/bda5$ pwd
+/home/bda5
+/home/bda5$ cd Desktop
+/home/bda5/Desktop$ ls
+ImageConverter	ImageConverter.tgz  Matrix.cpp	Matrix.h  proj1  project01  project1  standup routine  year_codes.txt
+/home/bda5/Desktop$ pwd
+/home/bda5/Desktop
+/home/bda5/Desktop$ ls -l
+-gnatfind: cannot access 'x'$'\273\032\022\177\177': No such file or directory
+/home/bda5/Desktop$ ls -a
+-gnatfind: cannot access 'x'$'\273\032\022\177\177': No such file or directory
+/home/bda5/Desktop$ ps
+  PID TTY          TIME CMD
+10024 pts/15   00:00:00 bash
+10109 pts/15   00:00:00 proj03_cs232
+10193 pts/15   00:00:00 ps
+/home/bda5/Desktop$ ls -l
+-gnatfind: cannot access 'x'$'\273\032\022\177\177': No such file or directory
+/home/bda5/Desktop$ ls -a
+-gnatfind: cannot access 'x'$'\273\032\022\177\177': No such file or directory
+/home/bda5/Desktop$ pwd
+/home/bda5/Desktop
+/home/bda5/Desktop$ ls -l
+-gnatfind: cannot access 'x'$'\273\032\022\177\177': No such file or directory
+/home/bda5/Desktop$ bad command
+/home/bda5/Desktop$ pwd&
+/home/bda5/Desktop$ pwd &
+/home/bda5/Desktop$ -gnatfind: ignoring non-option arguments
+/home/bda5/Desktop
+pwd
+/home/bda5/Desktop
+/home/bda5/Desktop$ exit
+bda5@gold25:~/eclipse-workspace/proj03_cs232$ exit
+
+Script done on Thu 11 Apr 2019 05:46:40 PM EDT

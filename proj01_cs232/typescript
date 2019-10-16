@@ -1,0 +1,749 @@
+Script started on Wed 13 Feb 2019 04:10:53 PM EST
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ ls
+CallTimer.cpp  CallTimer.h  Debug  driver.cpp  NanoTimer.h  typescript
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ cd Debug
+bda5@maroon33:~/eclipse-workspace/proj01_cs232/Debug$ make all
+make: Nothing to be done for 'all'.
+bda5@maroon33:~/eclipse-workspace/proj01_cs232/Debug$ cd ..
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ cat deib   river.cpp
+/*
+ * main.cpp
+ * uses CallTimer to run a program that times system calls
+ *  Created on: Feb 10, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "CallTimer.h"
+#include <stdio.h>
+#include <pthread.h>
+#include <iostream>
+
+using namespace std;
+
+/* main driver function
+ * @param argc: the number of arguments form command line.
+ * @param argv: the (dynamic) array representing the list of command line arguments.
+ */
+int main( int argc, char* argv[] )
+{
+	CallTimer ct;
+	ct.run(argc, argv);
+}
+
+
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ cat callT     CallTimer.h
+/*
+ * CallTimer.h
+ * a class that times system calls such as fork() and pthread_create()
+ *  Created on: Feb 13, 2019
+ *      Author: Bryce Allen
+ */
+
+#ifndef CALLTIMER_H_
+#define CALLTIMER_H_
+
+class CallTimer {
+public:
+	CallTimer();
+	double average(double sum, unsigned numData);
+	void run(int argc, char* argv[]);
+};
+
+#endif /* CALLTIMER_H_ */
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ cat c     cat CallTimer.hchphphh 
+/*
+ * CallTimer.cpp
+ * the source file for the CallTimer class; method definitions.
+ *  Created on: Feb 13, 2019
+ *      Author: Bryce Allen
+ */
+
+#include "CallTimer.h"
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <pthread.h>
+#include "NanoTimer.h"
+using namespace std;
+
+CallTimer::CallTimer() {}
+
+/**
+ * computes the average of a sum of numbers
+ * @param sum: a sum of numbers calculated elsewhere
+ * @param numData: the number of data points added in sum
+ * @return sum/numData
+ */
+double CallTimer::average(double sum, unsigned numData)
+{ return sum / numData; }
+
+/* function for identifying which thread is executing the function.
+ * @param arg: the id of the thread executing this function.
+ */
+void *printHello(void *arg)
+{ cout << "hello from child thread (tid: " << (long)arg << ")" << endl; }
+
+/* runs the program with the given command line argument parameters.
+ * @param argc: the number of arguments form command line.
+ * @param argv: the (dynamic) array representing the list of command line arguments.
+ */
+void CallTimer::run(int argc, char* argv[])
+{
+	bool process = false;
+	bool thread = false;
+	unsigned repeat = 1;
+
+	//traverse argv to see what commands were passed
+	//parsing the command line
+	for(int i = 1; i < argc; i++)
+	{
+		if( string(argv[i]) == "-t" || string(argv[i]) == "-thread" )
+		{
+			thread = true;
+			cout << "thread was called." << endl;
+		}
+		else if( string(argv[i]) == "-p" || string(argv[i]) == "-process" )
+		{
+			process = true;
+			cout << "process was called." << endl;
+		}
+		else if( string(argv[i]).substr(0,2) == "-r" )
+		{
+			string command = string(argv[i]);
+			int length = command.length();
+			repeat = atoi(command.substr(2,length).c_str());
+			cout << "repeat was called." << endl;
+		}
+		else
+		{
+			cout<< "USAGE ERROR" << endl;
+			exit(0);
+		}
+	}
+
+	//BEGIN: the timing comparison part of the program.
+	NanoTimer nt;
+	double sum = 0.0;
+
+	//get an average time for fork() startup
+	if( process )
+	{
+		 for( int i = 0; i < repeat; i++)
+		 {
+			 nt.start();
+			 //make two processes that run same program after this line...
+			 pid_t pid = fork();
+			 nt.stop();
+			 sum += nt.asDouble();
+
+			 if( pid == 0 ) //if child...
+			 {
+				 cout << "hello from child process (pid: "
+						 << getpid()
+						 << ")"
+						 //<< nt.asDouble()
+						 << endl;
+			 	 kill(getpid(), SIGTERM);
+			 }
+			 else //if parent...
+			 {
+				 //cout << "hello from parent (pid: " << getpid() << ")" << nt.asDouble() << endl;
+				 wait();
+			 }
+			 nt.reset();
+		 }
+		 cout << "Average process creation time: "
+		 				 << average(sum, repeat)
+		 				 << endl;
+	}
+
+	if( thread )
+	{
+		 sum = 0.0;
+		 nt.reset();
+		 pthread_t threads[repeat];
+
+		 for( int i = 0; i < repeat; i++)
+		 {
+			 nt.start();
+			 //start a thread
+			 pthread_create(&threads[i], NULL, printHello, (void*)i);
+			 nt.stop();
+			 pthread_join(threads[i], NULL);
+			 sum += nt.asDouble();
+
+			 nt.reset();
+		 }
+		 cout << "Average thread creation time: "
+		 				 << average(sum, repeat)
+		 				 << endl;
+	}
+}
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ cat NanoTimer.c h
+
+/* NanoTimer.h provides a simple nano-scale timer.
+ *
+ * Begun by: John Kloosterman, for CS 232 at Calvin College.
+ * Enhanced by: Prof. Adams.
+ *
+ * To use this class, compile/link with the '-lrt' switch.
+ *
+ * In Eclipse: Project > Properties > GCC C++ Linker > Libraries > Libraries > +, add 'rt'
+ */
+
+#ifndef NANO_TIMER_H_
+#define NANO_TIMER_H_
+
+#include <ctime>        // timespec, clock_gettime(), etc.
+#include <iostream>     // C++ I/O
+#include <iomanip>      // setprecision()
+#include <sstream>      // stringstream for in-memory formatting
+using namespace std;
+
+class NanoTimer {
+public:
+	NanoTimer()                  { myTotalTime = 0.0; }
+	void start();
+	void stop();
+	void reset()                 { myTotalTime = 0.0; }
+    string asString() const;
+	double getTotalTime() const  { return myTotalTime; }
+	double asDouble() const;
+
+private:
+	struct timespec myStart;
+	struct timespec myEnd;
+	double myTotalTime;
+};
+
+
+/* start the timer.
+ * Postcondition: myStart contains the current time.
+ */
+inline
+void NanoTimer::start() {
+	clock_gettime(CLOCK_MONOTONIC, &myStart);
+}
+
+/* stop the timer.
+ * Postcondition: myStop contains the current time.
+ */
+inline
+void NanoTimer::stop() {
+	clock_gettime(CLOCK_MONOTONIC, &myEnd);
+	myTotalTime += this->asDouble();
+}
+
+const long NSEC_PER_SEC = 1000000000;
+
+/* Utility function to compute time differences
+ *  (used by asString(), asDouble(), etc.
+ * Receive: end, begin, two timespec values.
+ * Return: end - begin
+ * Based on: http://www.gnu.org/s/libc/manual/html_node/Elapsed-Time.html
+ */
+inline
+timespec operator-(const timespec& end, const timespec& begin)
+{
+	timespec result = begin;
+	/* Perform the carry for the later subtraction. */
+	if (end.tv_nsec < begin.tv_nsec) {
+		int nsec = (begin.tv_nsec - end.tv_nsec) / NSEC_PER_SEC + 1;
+		result.tv_nsec -= NSEC_PER_SEC * nsec;
+		result.tv_sec += nsec;
+	}
+	if (end.tv_nsec - begin.tv_nsec > NSEC_PER_SEC) {
+		int nsec = (end.tv_nsec - begin.tv_nsec) / NSEC_PER_SEC;
+		result.tv_nsec += NSEC_PER_SEC * nsec;
+		result.tv_sec -= nsec;
+	}
+
+	/* Compute the time remaining to wait.
+            tv_usec is certainly positive. */
+	result.tv_sec = end.tv_sec - result.tv_sec;
+	result.tv_nsec = end.tv_nsec - result.tv_nsec;
+
+	return result;
+}
+
+/* String representation.
+ * Return: the processor time (user + system)
+ *    used in the interval between calls to start() and stop(),
+ *    with nanosecond granularity, as a string.
+ */
+inline
+string NanoTimer::asString() const {
+    struct timespec diff = myEnd - myStart;
+    stringstream sstr;
+    sstr << diff.tv_sec
+         << ( (diff.tv_sec == 1) ? " sec, " : " secs, " )
+         << diff.tv_nsec
+         << " nsecs";
+    return sstr.str();
+}
+
+/* Double representation.
+ * Return: the processor time (user + system)
+ *    used in the interval between calls to start() and stop(),
+ *    with nanosecond granularity, as a double.
+ */
+inline
+double NanoTimer::asDouble() const {
+   struct timespec diff = myEnd - myStart;
+   return double(diff.tv_sec) + double(diff.tv_nsec) / double(NSEC_PER_SEC);
+}
+
+
+/* ostream output
+ * Receive: out, an ostream; aTimer, a NanoTimer.
+ * Postcondition: aTimer's double representation
+ *      has been inserted into out.
+ * Return: out (for chaining).
+ */
+inline
+ostream& operator<<(ostream& out, const NanoTimer& aTimer) {
+   out << fixed << showpoint << setprecision(9)
+	   << aTimer.getTotalTime();
+   return out;
+}
+
+/* Utility function to display a timespec structure's values
+ *  (for debugging purposes)
+ */
+inline
+ostream& operator<<(ostream& out, const struct timespec& ts) {
+   out << ts.tv_sec
+       << ( (ts.tv_sec == 1) ? " sec, " : " secs, " )
+       << ts.tv_nsec
+       << " nsecs";
+   return out;
+}
+
+#endif /* NANO_TIMER_H_ */
+
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ cat NanoTimer.hCallTimer.cpp[2Ph[1Pdriver.cppd ..[Kmake allcd Debugls[K./Debug/proj01_cs232 -process -r100-[1@-[1@t[1@ 
+process was called.
+thread was called.
+repeat was called.
+hello from child process (pid: 23137)
+hello from child process (pid: 23138)
+hello from child process (pid: 23139)
+hello from child process (pid: 23140)
+hello from child process (pid: 23141)
+hello from child process (pid: 23142)
+hello from child process (pid: 23143)
+hello from child process (pid: 23144)
+hello from child process (pid: 23145)
+hello from child process (pid: 23146)
+hello from child process (pid: 23147)
+hello from child process (pid: 23149)
+hello from child process (pid: 23150)
+hello from child process (pid: 23151)
+hello from child process (pid: 23148)
+hello from child process (pid: 23152)
+hello from child process (pid: 23153)
+hello from child process (pid: 23155)
+hello from child process (pid: 23154)
+hello from child process (pid: 23156)
+hello from child process (pid: 23157)
+hello from child process (pid: 23158)
+hello from child process (pid: 23159)
+hello from child process (pid: 23160)
+hello from child process (pid: 23161)
+hello from child process (pid: 23163)
+hello from child process (pid: 23164)
+hello from child process (pid: 23165)
+hello from child process (pid: 23162)
+hello from child process (pid: 23166)
+hello from child process (pid: 23167)
+hello from child process (pid: 23169)
+hello from child process (pid: 23170)
+hello from child process (pid: 23168)
+hello from child process (pid: 23172)
+hello from child process (pid: 23173)
+hello from child process (pid: 23171)
+hello from child process (pid: 23174)
+hello from child process (pid: 23175)
+hello from child process (pid: 23176)
+hello from child process (pid: 23178)
+hello from child process (pid: 23179)
+hello from child process (pid: 23180)
+hello from child process (pid: 23177)
+hello from child process (pid: 23181)
+hello from child process (pid: 23182)
+hello from child process (pid: 23184)
+hello from child process (pid: 23183)
+hello from child process (pid: 23185)
+hello from child process (pid: 23187)
+hello from child process (pid: 23189)
+hello from child process (pid: 23190)
+hello from child process (pid: 23188)
+hello from child process (pid: 23191)
+hello from child process (pid: 23193)
+hello from child process (pid: 23194)
+hello from child process (pid: 23192)
+hello from child process (pid: 23195)
+hello from child process (pid: 23196)
+hello from child process (pid: 23198)
+hello from child process (pid: 23197)
+hello from child process (pid: 23199)
+hello from child process (pid: 23201)
+hello from child process (pid: 23202)
+hello from child process (pid: 23203)
+hello from child process (pid: 23200)
+hello from child process (pid: 23205)
+hello from child process (pid: 23206)
+hello from child process (pid: 23204)
+hello from child process (pid: 23208)
+hello from child process (pid: 23207)
+hello from child process (pid: 23210)
+hello from child process (pid: 23211)
+hello from child process (pid: 23209)
+hello from child process (pid: 23213)
+hello from child process (pid: 23212)
+hello from child process (pid: 23215)
+hello from child process (pid: 23216)
+hello from child process (pid: 23214)
+hello from child process (pid: 23218)
+hello from child process (pid: 23219)
+hello from child process (pid: 23217)
+hello from child process (pid: 23221)
+hello from child process (pid: 23220)
+hello from child process (pid: 23223)
+hello from child process (pid: 23224)
+hello from child process (pid: 23222)
+hello from child process (pid: 23226)
+hello from child process (pid: 23227)
+hello from child process (pid: 23225)
+hello from child process (pid: 23228)
+hello from child process (pid: 23229)
+hello from child process (pid: 23230)
+hello from child process (pid: 23231)
+hello from child process (pid: 23232)
+hello from child process (pid: 23233)
+Average process creation time: 4.94899e-05
+hello from child process (pid: 23235)
+hello from child process (pid: 23234)
+hello from child process (pid: 23236)
+hello from child thread (tid: 0)
+hello from child thread (tid: 1)
+hello from child thread (tid: 2)
+hello from child thread (tid: 3)
+hello from child process (pid: 23186)
+hello from child thread (tid: 4)
+hello from child thread (tid: 5)
+hello from child thread (tid: 6)
+hello from child thread (tid: 7)
+hello from child thread (tid: 8)
+hello from child thread (tid: 9)
+hello from child thread (tid: 10)
+hello from child thread (tid: 11)
+hello from child thread (tid: 12)
+hello from child thread (tid: 13)
+hello from child thread (tid: 14)
+hello from child thread (tid: 15)
+hello from child thread (tid: 16)
+hello from child thread (tid: 17)
+hello from child thread (tid: 18)
+hello from child thread (tid: 19)
+hello from child thread (tid: 20)
+hello from child thread (tid: 21)
+hello from child thread (tid: 22)
+hello from child thread (tid: 23)
+hello from child thread (tid: 24)
+hello from child thread (tid: 25)
+hello from child thread (tid: 26)
+hello from child thread (tid: 27)
+hello from child thread (tid: 28)
+hello from child thread (tid: 29)
+hello from child thread (tid: 30)
+hello from child thread (tid: 31)
+hello from child thread (tid: 32)
+hello from child thread (tid: 33)
+hello from child thread (tid: 34)
+hello from child thread (tid: 35)
+hello from child thread (tid: 36)
+hello from child thread (tid: 37)
+hello from child thread (tid: 38)
+hello from child thread (tid: 39)
+hello from child thread (tid: 40)
+hello from child thread (tid: 41)
+hello from child thread (tid: 42)
+hello from child thread (tid: 43)
+hello from child thread (tid: 44)
+hello from child thread (tid: 45)
+hello from child thread (tid: 46)
+hello from child thread (tid: 47)
+hello from child thread (tid: 48)
+hello from child thread (tid: 49)
+hello from child thread (tid: 50)
+hello from child thread (tid: 51)
+hello from child thread (tid: 52)
+hello from child thread (tid: 53)
+hello from child thread (tid: 54)
+hello from child thread (tid: 55)
+hello from child thread (tid: 56)
+hello from child thread (tid: 57)
+hello from child thread (tid: 58)
+hello from child thread (tid: 59)
+hello from child thread (tid: 60)
+hello from child thread (tid: 61)
+hello from child thread (tid: 62)
+hello from child thread (tid: 63)
+hello from child thread (tid: 64)
+hello from child thread (tid: 65)
+hello from child thread (tid: 66)
+hello from child thread (tid: 67)
+hello from child thread (tid: 68)
+hello from child thread (tid: 69)
+hello from child thread (tid: 70)
+hello from child thread (tid: 71)
+hello from child thread (tid: 72)
+hello from child thread (tid: 73)
+hello from child thread (tid: 74)
+hello from child thread (tid: 75)
+hello from child thread (tid: 76)
+hello from child thread (tid: 77)
+hello from child thread (tid: 78)
+hello from child thread (tid: 79)
+hello from child thread (tid: 80)
+hello from child thread (tid: 81)
+hello from child thread (tid: 82)
+hello from child thread (tid: 83)
+hello from child thread (tid: 84)
+hello from child thread (tid: 85)
+hello from child thread (tid: 86)
+hello from child thread (tid: 87)
+hello from child thread (tid: 88)
+hello from child thread (tid: 89)
+hello from child thread (tid: 90)
+hello from child thread (tid: 91)
+hello from child thread (tid: 92)
+hello from child thread (tid: 93)
+hello from child thread (tid: 94)
+hello from child thread (tid: 95)
+hello from child thread (tid: 96)
+hello from child thread (tid: 97)
+hello from child thread (tid: 98)
+hello from child thread (tid: 99)
+Average thread creation time: 4.62843e-06
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ ./Debug/proj01_cs232 -process -t -r100[1@h[1@r[1@e[1@a[1@d[1P[1P[1P[1P[1P[1P
+process was called.
+thread was called.
+repeat was called.
+hello from child process (pid: 23341)
+hello from child process (pid: 23342)
+hello from child process (pid: 23343)
+hello from child process (pid: 23344)
+hello from child process (pid: 23345)
+hello from child process (pid: 23346)
+hello from child process (pid: 23347)
+hello from child process (pid: 23348)
+hello from child process (pid: 23349)
+hello from child process (pid: 23350)
+hello from child process (pid: 23351)
+hello from child process (pid: 23352)
+hello from child process (pid: 23353)
+hello from child process (pid: 23354)
+hello from child process (pid: 23355)
+hello from child process (pid: 23356)
+hello from child process (pid: 23357)
+hello from child process (pid: 23358)
+hello from child process (pid: 23359)
+hello from child process (pid: 23360)
+hello from child process (pid: 23361)
+hello from child process (pid: 23362)
+hello from child process (pid: 23363)
+hello from child process (pid: 23364)
+hello from child process (pid: 23365)
+hello from child process (pid: 23367)
+hello from child process (pid: 23366)
+hello from child process (pid: 23368)
+hello from child process (pid: 23369)
+hello from child process (pid: 23370)
+hello from child process (pid: 23371)
+hello from child process (pid: 23372)
+hello from child process (pid: 23373)
+hello from child process (pid: 23374)
+hello from child process (pid: 23375)
+hello from child process (pid: 23376)
+hello from child process (pid: 23377)
+hello from child process (pid: 23378)
+hello from child process (pid: 23379)
+hello from child process (pid: 23380)
+hello from child process (pid: 23381)
+hello from child process (pid: 23382)
+hello from child process (pid: 23383)
+hello from child process (pid: 23385)
+hello from child process (pid: 23384)
+hello from child process (pid: 23386)
+hello from child process (pid: 23387)
+hello from child process (pid: 23388)
+hello from child process (pid: 23389)
+hello from child process (pid: 23391)
+hello from child process (pid: 23392)
+hello from child process (pid: 23390)
+hello from child process (pid: 23394)
+hello from child process (pid: 23393)
+hello from child process (pid: 23396)
+hello from child process (pid: 23397)
+hello from child process (pid: 23395)
+hello from child process (pid: 23399)
+hello from child process (pid: 23400)
+hello from child process (pid: 23398)
+hello from child process (pid: 23401)
+hello from child process (pid: 23404)
+hello from child process (pid: 23403)
+hello from child process (pid: 23402)
+hello from child process (pid: 23405)
+hello from child process (pid: 23406)
+hello from child process (pid: 23407)
+hello from child process (pid: 23409)
+hello from child process (pid: 23408)
+hello from child process (pid: 23410)
+hello from child process (pid: 23412)
+hello from child process (pid: 23411)
+hello from child process (pid: 23413)
+hello from child process (pid: 23414)
+hello from child process (pid: 23415)
+hello from child process (pid: 23417)
+hello from child process (pid: 23416)
+hello from child process (pid: 23418)
+hello from child process (pid: 23419)
+hello from child process (pid: 23421)
+hello from child process (pid: 23422)
+hello from child process (pid: 23423)
+hello from child process (pid: 23420)
+hello from child process (pid: 23425)
+hello from child process (pid: 23424)
+hello from child process (pid: 23427)
+hello from child process (pid: 23426)
+hello from child process (pid: 23428)
+hello from child process (pid: 23430)
+hello from child process (pid: 23429)
+hello from child process (pid: 23431)
+hello from child process (pid: 23432)
+hello from child process (pid: 23433)
+hello from child process (pid: 23434)
+hello from child process (pid: 23435)
+hello from child process (pid: 23436)
+Average process creation time: 4.34628e-05
+hello from child process (pid: 23439)
+hello from child process (pid: 23438)
+hello from child process (pid: 23437)
+hello from child process (pid: 23440)
+hello from child thread (tid: 0)
+hello from child thread (tid: 1)
+hello from child thread (tid: 2)
+hello from child thread (tid: 3)
+hello from child thread (tid: 4)
+hello from child thread (tid: 5)
+hello from child thread (tid: 6)
+hello from child thread (tid: 7)
+hello from child thread (tid: 8)
+hello from child thread (tid: 9)
+hello from child thread (tid: 10)
+hello from child thread (tid: 11)
+hello from child thread (tid: 12)
+hello from child thread (tid: 13)
+hello from child thread (tid: 14)
+hello from child thread (tid: 15)
+hello from child thread (tid: 16)
+hello from child thread (tid: 17)
+hello from child thread (tid: 18)
+hello from child thread (tid: 19)
+hello from child thread (tid: 20)
+hello from child thread (tid: 21)
+hello from child thread (tid: 22)
+hello from child thread (tid: 23)
+hello from child thread (tid: 24)
+hello from child thread (tid: 25)
+hello from child thread (tid: 26)
+hello from child thread (tid: 27)
+hello from child thread (tid: 28)
+hello from child thread (tid: 29)
+hello from child thread (tid: 30)
+hello from child thread (tid: 31)
+hello from child thread (tid: 32)
+hello from child thread (tid: 33)
+hello from child thread (tid: 34)
+hello from child thread (tid: 35)
+hello from child thread (tid: 36)
+hello from child thread (tid: 37)
+hello from child thread (tid: 38)
+hello from child thread (tid: 39)
+hello from child thread (tid: 40)
+hello from child thread (tid: 41)
+hello from child thread (tid: 42)
+hello from child thread (tid: 43)
+hello from child thread (tid: 44)
+hello from child thread (tid: 45)
+hello from child thread (tid: 46)
+hello from child thread (tid: 47)
+hello from child thread (tid: 48)
+hello from child thread (tid: 49)
+hello from child thread (tid: 50)
+hello from child thread (tid: 51)
+hello from child thread (tid: 52)
+hello from child thread (tid: 53)
+hello from child thread (tid: 54)
+hello from child thread (tid: 55)
+hello from child thread (tid: 56)
+hello from child thread (tid: 57)
+hello from child thread (tid: 58)
+hello from child thread (tid: 59)
+hello from child thread (tid: 60)
+hello from child thread (tid: 61)
+hello from child thread (tid: 62)
+hello from child thread (tid: 63)
+hello from child thread (tid: 64)
+hello from child thread (tid: 65)
+hello from child thread (tid: 66)
+hello from child thread (tid: 67)
+hello from child thread (tid: 68)
+hello from child thread (tid: 69)
+hello from child thread (tid: 70)
+hello from child thread (tid: 71)
+hello from child thread (tid: 72)
+hello from child thread (tid: 73)
+hello from child thread (tid: 74)
+hello from child thread (tid: 75)
+hello from child thread (tid: 76)
+hello from child thread (tid: 77)
+hello from child thread (tid: 78)
+hello from child thread (tid: 79)
+hello from child thread (tid: 80)
+hello from child thread (tid: 81)
+hello from child thread (tid: 82)
+hello from child thread (tid: 83)
+hello from child thread (tid: 84)
+hello from child thread (tid: 85)
+hello from child thread (tid: 86)
+hello from child thread (tid: 87)
+hello from child thread (tid: 88)
+hello from child thread (tid: 89)
+hello from child thread (tid: 90)
+hello from child thread (tid: 91)
+hello from child thread (tid: 92)
+hello from child thread (tid: 93)
+hello from child thread (tid: 94)
+hello from child thread (tid: 95)
+hello from child thread (tid: 96)
+hello from child thread (tid: 97)
+hello from child thread (tid: 98)
+hello from child thread (tid: 99)
+Average thread creation time: 4.67833e-06
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ ./Debug/proj01_cs232 -p -thread -r100  
+process was called.
+thread was called.
+repeat was called.
+Average process creation time: 0.000140958
+hello from child thread (tid: 0)
+hello from child process (pid: 23544)
+Average thread creation time: 0.00010871
+bda5@maroon33:~/eclipse-workspace/proj01_cs232$ exit
+
+Script done on Wed 13 Feb 2019 04:14:49 PM EST
